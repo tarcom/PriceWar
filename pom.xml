@@ -9,6 +9,15 @@
     <version>1.0</version>
 
     <dependencies>
+
+        <!-- https://mvnrepository.com/artifact/org.webjars/highcharts -->
+        <dependency>
+            <groupId>org.webjars</groupId>
+            <artifactId>highcharts</artifactId>
+            <version>5.0.10</version>
+        </dependency>
+
+
         <dependency>
             <!-- jsoup HTML parser library @ http://jsoup.org/ -->
             <groupId>org.jsoup</groupId>

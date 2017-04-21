@@ -18,7 +18,14 @@ public class FileHelper {
         printCategories(readCategoriesFile());
     }
 
-    public static void writeCategoriesToFile(TreeMap<String, String> categories) throws IOException {
+
+    public static void writeToFile(String text, String fileName) throws IOException {
+        try (BufferedWriter writer = Files.newBufferedWriter(Paths.get(fileName))) {
+            writer.write(text);
+        }
+    }
+
+            public static void writeCategoriesToFile(TreeMap<String, String> categories) throws IOException {
         try (BufferedWriter writer = Files.newBufferedWriter(Paths.get("categoriesToFetch.txt"))) {
             for (String s : categories.keySet()) {
                 writer.write(s + " - " + categories.get(s) + "\n");
@@ -28,7 +35,7 @@ public class FileHelper {
 
 
     public static TreeMap<String, String> readCategoriesFile() throws IOException {
-        List<String> lines = Files.readAllLines(Paths.get("categoriesToFetch.txt"));
+        List<String> lines = readFile("categoriesToFetch.txt");
 
         TreeMap<String, String> categories = new TreeMap<>();
 
@@ -37,6 +44,23 @@ public class FileHelper {
         }
 
         return categories;
+    }
+
+    public static String readFileStr(String fileName) throws IOException {
+
+        List<String> fileList = readFile(fileName);
+
+        StringBuffer output = new StringBuffer();
+        for(String s : fileList) {
+            output.append(s + "\n");
+        }
+
+        return output.toString();
+    }
+
+
+        public static List<String> readFile(String fileName) throws IOException {
+        return Files.readAllLines(Paths.get(fileName));
     }
 
     public static void printCategories(TreeMap<String, String> categories) {
