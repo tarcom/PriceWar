@@ -1,7 +1,12 @@
 package dk.skov.pricewar;
 
 import java.sql.*;
-import java.util.ArrayList;
+import java.sql.Date;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 
 /**
  * Created by aogj on 19-04-2017.
@@ -16,7 +21,7 @@ public class Archivist {
         if (flushDBOnInit) {
             executeUpdateOld("drop table if exists pricewar");
         }
-        executeUpdateOld("create table if not exists pricewar (item string, price string, category string, info string, image string, LastModifiedTime timestamp)");
+        executeUpdateOld("create table if not exists pricewar (item string, price string, category string, info string, image string, itemUrl String, itemSubPageUrl string, insertTimeStamp timestamp, initExecTimeStamp timestamp)");
     }
 
     public static void main(String[] args) throws ClassNotFoundException, SQLException {
@@ -28,7 +33,7 @@ public class Archivist {
     }
 
     public void printDb() throws ClassNotFoundException {
-        ArrayList<ArrayList<String>> out = executeQuery("select price, item, info from pricewar where item like '%worx%' order by price desc");
+        ArrayList<ArrayList<String>> out = executeQuery("select price, item, info from pricewar order by price desc");
 
         for (int i = 1; i < out.size(); i++) {
             for (int j = 0; j < out.get(i).size(); j++) {
@@ -41,20 +46,26 @@ public class Archivist {
 
     }
 
-    public void executeUpdatePreparedStatement(String item, String price, String category, String info, String image) throws ClassNotFoundException {
+    public void executeUpdatePreparedStatement(String item, String price, String category, String info, String image, String itemUrl, String itemSubPageUrl, LocalDateTime insertTimeStamp, LocalDateTime initExecTimeStamp) throws ClassNotFoundException {
         Class.forName("org.sqlite.JDBC");
 
         Connection connection = null;
         try {
             connection = DriverManager.getConnection("jdbc:sqlite:pricewar.db");
 
-            PreparedStatement preparedStatement = connection.prepareStatement("insert into pricewar values(?, ?, ?, ?, ?, CURRENT_TIMESTAMP )");
+            PreparedStatement preparedStatement = connection.prepareStatement("insert into pricewar values(?, ?, ?, ?, ?, ?, ?, ?, ? )");
             preparedStatement.setQueryTimeout(3);
             preparedStatement.setString(1, item);
             preparedStatement.setString(2, price);
             preparedStatement.setString(3, category);
             preparedStatement.setString(4, info);
             preparedStatement.setString(5, image);
+            preparedStatement.setString(6, itemUrl);
+            preparedStatement.setString(7, itemSubPageUrl);
+            preparedStatement.setString(8, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(insertTimeStamp));
+            preparedStatement.setString(9, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(initExecTimeStamp));
+
+
 
 
             preparedStatement.executeUpdate();
@@ -69,6 +80,12 @@ public class Archivist {
                 System.err.println(e);
             }
         }
+    }
+
+    static public Calendar fromLdt(LocalDateTime ldt) {
+        ZonedDateTime zdt = ZonedDateTime.of(ldt, ZoneId.systemDefault());
+        GregorianCalendar cal = GregorianCalendar.from(zdt);
+        return cal;
     }
 
     public void executeUpdateOld(String sql) throws ClassNotFoundException {
@@ -95,6 +112,9 @@ public class Archivist {
     }
 
     public ArrayList<ArrayList<String>> executeQuery(String sql) throws ClassNotFoundException {
+        return executeQuery(sql, true);
+    }
+    public ArrayList<ArrayList<String>> executeQuery(String sql, boolean includeColumnNames) throws ClassNotFoundException {
         Class.forName("org.sqlite.JDBC");
 
         ArrayList<ArrayList<String>> output = new ArrayList<>();
@@ -109,10 +129,12 @@ public class Archivist {
             ResultSetMetaData metadata = rs.getMetaData();
             int columnCount = metadata.getColumnCount();
             ArrayList<String> dbRow = new ArrayList<>();
-            for (int i = 1; i <= columnCount; i++) {
-                dbRow.add(metadata.getColumnName(i));
+            if (includeColumnNames) {
+                for (int i = 1; i <= columnCount; i++) {
+                    dbRow.add(metadata.getColumnName(i));
+                }
+                output.add(dbRow);
             }
-            output.add(dbRow);
 
             while (rs.next()) {
                 dbRow = new ArrayList<>();
