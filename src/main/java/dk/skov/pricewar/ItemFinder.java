@@ -48,27 +48,30 @@ public class ItemFinder {
 
         Document doc = Jsoup.connect(url).get();
 
-        int maxPages = Integer.parseInt(doc.select("div.paginator p").text().replaceAll("Total antal sider:", "").trim());
+//        int maxPages = Integer.parseInt(doc.select("div.paginator p").text().replaceAll("Total antal sider:", "").trim());
+        int maxPages = 1;
 
         System.out.print("crawling " + maxPages + " pages");
         int count = 0;
         for (int i = 1; i <= maxPages; i++) {
             doc = Jsoup.connect(url + "&page=" + i).get();
 
-            Elements elements = doc.select("div.product");
+            //doc.select("a[href]").addClass("structured-grid-product")
+//            Elements elements = doc.select("a[class*=structured-list-product]");
+            Elements elements = doc.select("a[class*=structured]");
             for (Element e : elements) {
-                String item = e.select("h3 a").text();
-                String image = e.select("div div a img[src$=.png]").attr("src");
-                String info = e.select("p.productdescription").text().replaceAll("Mere Info", "").trim();
-                String category = doc.select("div #breadcrumbs").text().replaceAll("PriceRunner >", "").trim();
-                String itemUrl = e.select("h3 a").attr("href");
+                String item = e.select("h3").text();
+                String image = e.select("img").attr("src");
+                String info = e.select("div[class*=description]").text();
+                String category = doc.select("li[itemprop*=itemListElement]").text();
+                String itemUrl = e.select("a[class*=structured]").attr("href");
                 String itemSubPageUrl = doc.baseUri();
                 LocalDateTime insertTimeStamp = LocalDateTime.now();
 
                 String price = e.select("strong a").text().replaceAll("fra|kr|\\.", "").trim();
 
                 if (price == null || price.equals("")) {
-                    price = e.getElementsByClass("price-rang").text().replaceAll("fra|kr|\\.", "").trim();
+                    price = e.select("span[class*=price]").text().replaceAll("fra|kr|\\.", "").trim();
                 }
 
                 count++;
