@@ -1,5 +1,6 @@
-package dk.skov.pricewar;
+package dk.skov.pricewar.fetcher;
 
+import dk.skov.pricewar.util.FileHelper;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;

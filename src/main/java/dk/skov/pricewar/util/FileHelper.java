@@ -1,9 +1,8 @@
-package dk.skov.pricewar;
-
-import sun.reflect.generics.tree.Tree;
+package dk.skov.pricewar.util;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
@@ -19,13 +18,16 @@ public class FileHelper {
     }
 
 
-    public static void writeToFile(String text, String fileName) throws IOException {
-        try (BufferedWriter writer = Files.newBufferedWriter(Paths.get(fileName))) {
+    public static void writeToFile(String text, String fileName) {
+        try (BufferedWriter writer = Files.newBufferedWriter(Paths.get(fileName), StandardCharsets.UTF_16)) {
             writer.write(text);
+            System.out.println("Wrote file: " + fileName);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
-            public static void writeCategoriesToFile(TreeMap<String, String> categories) throws IOException {
+    public static void writeCategoriesToFile(TreeMap<String, String> categories) throws IOException {
         try (BufferedWriter writer = Files.newBufferedWriter(Paths.get("categoriesToFetch.txt"))) {
             for (String s : categories.keySet()) {
                 writer.write(s + " - " + categories.get(s) + "\n");
@@ -51,7 +53,7 @@ public class FileHelper {
         List<String> fileList = readFile(fileName);
 
         StringBuffer output = new StringBuffer();
-        for(String s : fileList) {
+        for (String s : fileList) {
             output.append(s + "\n");
         }
 
@@ -59,7 +61,7 @@ public class FileHelper {
     }
 
 
-        public static List<String> readFile(String fileName) throws IOException {
+    public static List<String> readFile(String fileName) throws IOException {
         return Files.readAllLines(Paths.get(fileName));
     }
 

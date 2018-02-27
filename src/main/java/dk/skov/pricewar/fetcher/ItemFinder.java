@@ -1,5 +1,9 @@
-package dk.skov.pricewar;
+package dk.skov.pricewar.fetcher;
 
+import dk.skov.pricewar.db.ArchivistMySql;
+import dk.skov.pricewar.presenter.HtmlDbStatisticsGenerator;
+import dk.skov.pricewar.presenter.HtmlFancyGraphGenerator;
+import dk.skov.pricewar.util.FileHelper;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -7,7 +11,6 @@ import org.jsoup.select.Elements;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.Random;
 import java.util.TreeMap;
 
 /**
@@ -15,10 +18,10 @@ import java.util.TreeMap;
  */
 public class ItemFinder {
 
-    public Archivist archivist;
+    public ArchivistMySql archivist;
 
     public ItemFinder() throws ClassNotFoundException {
-        archivist = new Archivist(false);
+        archivist = new ArchivistMySql();
     }
 
     public static void main(String[] args) throws IOException, ClassNotFoundException {
@@ -32,11 +35,12 @@ public class ItemFinder {
         FileHelper.printCategories(categories);
 
         for (String url : categories.values()) {
-            System.out.println(url);
+            //System.out.println(url);
             itemFinder.doFetchData(url, initExecTimeStamp);
         }
 
-        new HtmlGenerator().doGenerate();
+        new HtmlFancyGraphGenerator().doGenerate();
+        new HtmlDbStatisticsGenerator().doGenerate();
 
         System.out.println("all done, bye");
     }
@@ -44,35 +48,42 @@ public class ItemFinder {
 
     public void doFetchData(String url, LocalDateTime initExecTimeStamp) throws IOException, ClassNotFoundException {
 
-        url = "http://www.pricerunner.dk" + url + "?numberOfProducts=60";
+        url = "http://www.pricerunner.dk" + url;
 
         Document doc = Jsoup.connect(url).get();
 
-//        int maxPages = Integer.parseInt(doc.select("div.paginator p").text().replaceAll("Total antal sider:", "").trim());
-        int maxPages = 1;
+        int numOfItems = Integer.parseInt(doc.select("span[class*=category-header__amount]").text().replaceAll("\\(|\\)", ""));
+        int maxPages = (numOfItems / 21) + 1;
 
-        System.out.print("crawling " + maxPages + " pages");
+        System.out.println();
+        System.out.print("crawling " + numOfItems + " items on " + maxPages + " (sub)pages starting on this URL=" + url);
         int count = 0;
         for (int i = 1; i <= maxPages; i++) {
-            doc = Jsoup.connect(url + "&page=" + i).get();
+            doc = Jsoup.connect(url + "?page=" + i).get();
 
             //doc.select("a[href]").addClass("structured-grid-product")
 //            Elements elements = doc.select("a[class*=structured-list-product]");
-            Elements elements = doc.select("a[class*=structured]");
+            Elements elements = doc.select("a[class*=list-product]");
+            if (elements.size() < 21 && i != maxPages) {
+                System.out.println();
+                System.out.print("[ WARN ] Did not find 21 items on subpage! Only found " + elements.size() + " elements on subpage " + doc.location() + ", continiuing to reach all " + maxPages + " subpages.");
+            }
             for (Element e : elements) {
                 String item = e.select("h3").text();
                 String image = e.select("img").attr("src");
-                String info = e.select("div[class*=description]").text();
+                String info = e.select("div[class*=product-description]").text();
+                if (info.length() > 101) info = info.substring(0, 100);
                 String category = doc.select("li[itemprop*=itemListElement]").text();
                 String itemUrl = e.select("a[class*=structured]").attr("href");
                 String itemSubPageUrl = doc.baseUri();
                 LocalDateTime insertTimeStamp = LocalDateTime.now();
 
-                String price = e.select("strong a").text().replaceAll("fra|kr|\\.", "").trim();
+//                String price = e.select("strong a").text().replaceAll("fra|kr|\\.", "").trim();
 
-                if (price == null || price.equals("")) {
-                    price = e.select("span[class*=price]").text().replaceAll("fra|kr|\\.", "").trim();
-                }
+//                if (price == null || price.equals("")) {
+                String price = e.select("span[class*=price]").text().replaceAll("fra|kr|\\.", "").trim();
+                price = price.split(" ")[0];
+//  }
 
                 count++;
 
@@ -86,14 +97,17 @@ public class ItemFinder {
                     //archivist.executeUpdatePreparedStatement(item, String.valueOf(priceInt), category, info, image, itemUrl, itemSubPageUrl, insertTimeStamp, initExecTimeStamp);
 
                 } catch (NumberFormatException nfe) {
-                    System.out.println("cannot parse int:" + price + ", item=" + item + ", itemSubPageUrl=" + itemSubPageUrl);
+                    System.out.println("[ ERROR ] cannot parse int:" + price + ", item=" + item + ", itemSubPageUrl=" + itemSubPageUrl);
                 }
 
             }
             System.out.print(".");
         }
 
-        System.out.println("I found " + count + " items on the page " + url);
+        if (count != numOfItems) {
+            System.out.println();
+            System.out.print("[ WARN ] I found " + count + " (suposted to be=" + numOfItems + ") items on " + maxPages + " subpages with this init page URL=" + url);
+        }
     }
 
 }

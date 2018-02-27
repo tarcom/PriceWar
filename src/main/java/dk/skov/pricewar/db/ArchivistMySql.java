@@ -1,39 +1,51 @@
-package dk.skov.pricewar;
+package dk.skov.pricewar.db;
 
 import java.sql.*;
-import java.sql.Date;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.ArrayList;
 
 /**
- * Created by aogj on 19-04-2017.
+ * Created by aogj on 27-02-2018.
  */
-public class Archivist {
+public class ArchivistMySql {
 
-    public Archivist() throws ClassNotFoundException {
-        this(false);
-    }
-
-    public Archivist(boolean flushDBOnInit) throws ClassNotFoundException {
-        if (flushDBOnInit) {
-            executeUpdateOld("drop table if exists pricewar");
+    static {
+        try {
+            Class.forName("com.mysql.jdbc.Driver").newInstance();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-        executeUpdateOld("create table if not exists pricewar (item string, price string, category string, info string, image string, itemUrl String, itemSubPageUrl string, insertTimeStamp timestamp, initExecTimeStamp timestamp)");
     }
 
-    public static void main(String[] args) throws ClassNotFoundException, SQLException {
-        Archivist archivist = new Archivist(false);
+
+    public ArchivistMySql() {
+    }
+
+    private static Connection getConnection() {
+        Connection con = null;
+        try {
+            String url = "jdbc:mysql://localhost:3306/pricewar";
+            String username = "root";
+            String passwd = "";
+            con = DriverManager.getConnection(url, username, passwd);
+        } catch (Exception e) {
+            System.out.println("FATAL. Cannot get a db connection!" + e);
+        }
+        return con;
+    }
+
+    public static void main(String[] args) {
+        ArchivistMySql archivistMySql = new ArchivistMySql();
 
         //archivist.executeUpdatePreparedStatement("super dims", "6000", "cat1 -> cat2 -> cat3", "info info info is fino", "fancy_image_url");
 
-        archivist.printDb();
+        archivistMySql.printDb("select price, item, info from pricewar order by price desc");
+
     }
 
-    public void printDb() throws ClassNotFoundException {
-        ArrayList<ArrayList<String>> out = executeQuery("select price, item, info from pricewar order by price desc");
+    public void printDb(String sql) {
+        ArrayList<ArrayList<String>> out = executeQuery(sql);
 
         for (int i = 1; i < out.size(); i++) {
             for (int j = 0; j < out.get(i).size(); j++) {
@@ -47,13 +59,15 @@ public class Archivist {
     }
 
     public void executeUpdatePreparedStatement(String item, String price, String category, String info, String image, String itemUrl, String itemSubPageUrl, LocalDateTime insertTimeStamp, LocalDateTime initExecTimeStamp) throws ClassNotFoundException {
-        Class.forName("org.sqlite.JDBC");
 
+
+        PreparedStatement preparedStatement = null;
         Connection connection = null;
         try {
-            connection = DriverManager.getConnection("jdbc:sqlite:pricewar.db");
 
-            PreparedStatement preparedStatement = connection.prepareStatement("insert into pricewar values(?, ?, ?, ?, ?, ?, ?, ?, ? )");
+            connection = getConnection();
+
+            preparedStatement = connection.prepareStatement("insert into pricewar values(?, ?, ?, ?, ?, ?, ?, ?, ? )");
             preparedStatement.setQueryTimeout(3);
             preparedStatement.setString(1, item);
             preparedStatement.setString(2, price);
@@ -65,64 +79,37 @@ public class Archivist {
             preparedStatement.setString(8, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(insertTimeStamp));
             preparedStatement.setString(9, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(initExecTimeStamp));
 
-
-
-
             preparedStatement.executeUpdate();
 
         } catch (SQLException e) {
             System.err.println(e.getMessage());
         } finally {
             try {
-                if (connection != null)
+                if (!preparedStatement.isClosed()) {
+                    preparedStatement.close();
+                }
+                if (!connection.isClosed()) {
                     connection.close();
+                }
             } catch (SQLException e) {
                 System.err.println(e);
             }
         }
     }
 
-    static public Calendar fromLdt(LocalDateTime ldt) {
-        ZonedDateTime zdt = ZonedDateTime.of(ldt, ZoneId.systemDefault());
-        GregorianCalendar cal = GregorianCalendar.from(zdt);
-        return cal;
-    }
-
-    public void executeUpdateOld(String sql) throws ClassNotFoundException {
-        Class.forName("org.sqlite.JDBC");
-
-        Connection connection = null;
-        try {
-            connection = DriverManager.getConnection("jdbc:sqlite:pricewar.db");
-            Statement statement = connection.createStatement();
-            statement.setQueryTimeout(3);
-
-            statement.executeUpdate(sql);
-
-        } catch (SQLException e) {
-            System.err.println(e.getMessage());
-        } finally {
-            try {
-                if (connection != null)
-                    connection.close();
-            } catch (SQLException e) {
-                System.err.println(e);
-            }
-        }
-    }
-
-    public ArrayList<ArrayList<String>> executeQuery(String sql) throws ClassNotFoundException {
+    public ArrayList<ArrayList<String>> executeQuery(String sql) {
         return executeQuery(sql, true);
     }
-    public ArrayList<ArrayList<String>> executeQuery(String sql, boolean includeColumnNames) throws ClassNotFoundException {
-        Class.forName("org.sqlite.JDBC");
+
+    public ArrayList<ArrayList<String>> executeQuery(String sql, boolean includeColumnNames) {
 
         ArrayList<ArrayList<String>> output = new ArrayList<>();
         Connection connection = null;
+        Statement statement = null;
         try {
-            connection = DriverManager.getConnection("jdbc:sqlite:pricewar.db");
-            Statement statement = connection.createStatement();
-            statement.setQueryTimeout(3);
+            connection = getConnection();
+            statement = connection.createStatement();
+            statement.setQueryTimeout(30);
 
             ResultSet rs = statement.executeQuery(sql);
 
@@ -152,8 +139,12 @@ public class Archivist {
             return null;
         } finally {
             try {
-                if (connection != null)
+                if (!statement.isClosed()) {
+                    statement.close();
+                }
+                if (!connection.isClosed()) {
                     connection.close();
+                }
             } catch (SQLException e) {
                 System.err.println(e);
                 return null;
@@ -162,5 +153,6 @@ public class Archivist {
 
 
     }
+
 
 }

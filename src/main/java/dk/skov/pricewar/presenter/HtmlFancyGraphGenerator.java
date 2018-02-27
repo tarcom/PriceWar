@@ -1,6 +1,7 @@
-package dk.skov.pricewar;
+package dk.skov.pricewar.presenter;
 
-import javafx.scene.shape.Arc;
+import dk.skov.pricewar.db.ArchivistMySql;
+import dk.skov.pricewar.util.FileHelper;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -13,15 +14,16 @@ import java.util.TreeMap;
  * Place description here.
  */
 
-public class HtmlGenerator {
+public class HtmlFancyGraphGenerator {
 
-    private Archivist archivist = new Archivist();
+//    private ArchivistSqlite archivistMysql = new ArchivistSqlite();
+    private ArchivistMySql archivistMysql = new ArchivistMySql();
 
-    public HtmlGenerator() throws ClassNotFoundException {
+    public HtmlFancyGraphGenerator() throws ClassNotFoundException {
     }
 
     public static void main(String[] args) throws IOException, ClassNotFoundException {
-        new HtmlGenerator().doGenerate();
+        new HtmlFancyGraphGenerator().doGenerate();
     }
 
 
@@ -32,14 +34,14 @@ public class HtmlGenerator {
         String containers = "";
         String charts = "";
 
-        ArrayList<ArrayList<String>> distinctItemList = archivist.executeQuery("select distinct itemUrl, category, item, info from pricewar where price is NOT ''", false);
+        ArrayList<ArrayList<String>> distinctItemList = archivistMysql.executeQuery("select distinct itemUrl, category, item, info from pricewar where price != ''", false);
 
         int containerCount = 1;
         for (ArrayList<String> item : distinctItemList) {
 
             String itemUrl = item.get(0);
 
-            ArrayList<ArrayList<String>> itemPrices = archivist.executeQuery("select price, insertTimeStamp from pricewar where itemUrl = '" + itemUrl + "'", false);
+            ArrayList<ArrayList<String>> itemPrices = archivistMysql.executeQuery("select price, insertTimeStamp from pricewar where itemUrl = '" + itemUrl + "'", false);
 
             //TreeMap<LocalDateTime, Integer> localDateTimeIntegerTreeMap = generateTestDataSet();
             //String dataSet = dataSetGenerator(localDateTimeIntegerTreeMap);
@@ -62,7 +64,7 @@ public class HtmlGenerator {
         htmlChartTemplate = htmlChartTemplate.replaceAll("<!-- CONTAINER_PLACEHOLDER_SEARCH_TOKEN -->", containers);
         htmlChartTemplate = htmlChartTemplate.replaceAll("<!-- SCRIPT_PLACEHOLDER_SEARCH_TOKEN -->", charts);
 
-        FileHelper.writeToFile(htmlChartTemplate, "htmlOutput/PriceWar.html");
+        FileHelper.writeToFile(htmlChartTemplate, "htmlOutput/PriceWarFancyGraph.html");
 
     }
 
@@ -70,7 +72,7 @@ public class HtmlGenerator {
         StringBuffer output = new StringBuffer();
 
         DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("uuuu, M, d");
-        DateTimeFormatter dateTimeDbParser = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        DateTimeFormatter dateTimeDbParser = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.S");
 
         for (ArrayList<String> item : itemPrices) {
 
