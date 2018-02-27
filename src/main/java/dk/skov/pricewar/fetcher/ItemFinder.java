@@ -104,6 +104,7 @@ public class ItemFinder {
             System.out.print(".");
         }
 
+        System.out.println();
         if (count != numOfItems) {
             System.out.println();
             System.out.print("[ WARN ] I found " + count + " (suposted to be=" + numOfItems + ") items on " + maxPages + " subpages with this init page URL=" + url);
