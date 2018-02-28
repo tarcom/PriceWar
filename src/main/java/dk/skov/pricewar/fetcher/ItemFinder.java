@@ -59,49 +59,54 @@ public class ItemFinder {
         System.out.print("crawling " + numOfItems + " items on " + maxPages + " (sub)pages starting on this URL=" + url);
         int count = 0;
         for (int i = 1; i <= maxPages; i++) {
-            doc = Jsoup.connect(url + "?page=" + i).get();
+            try {
+                doc = Jsoup.connect(url + "?page=" + i).get();
 
-            //doc.select("a[href]").addClass("structured-grid-product")
+                //doc.select("a[href]").addClass("structured-grid-product")
 //            Elements elements = doc.select("a[class*=structured-list-product]");
-            Elements elements = doc.select("a[class*=list-product]");
-            if (elements.size() < 21 && i != maxPages) {
-                System.out.println();
-                System.out.print("[ WARN ] Did not find 21 items on subpage! Only found " + elements.size() + " elements on subpage " + doc.location() + ", continiuing to reach all " + maxPages + " subpages.");
-            }
-            for (Element e : elements) {
-                String item = e.select("h3").text();
-                String image = e.select("img").attr("src");
-                String info = e.select("div[class*=product-description]").text();
-                if (info.length() > 101) info = info.substring(0, 100);
-                String category = doc.select("li[itemprop*=itemListElement]").text();
-                String itemUrl = e.select("a[class*=structured]").attr("href");
-                String itemSubPageUrl = doc.baseUri();
-                LocalDateTime insertTimeStamp = LocalDateTime.now();
+                Elements elements = doc.select("a[class*=list-product]");
+                if (elements.size() < 21 && i != maxPages) {
+                    System.out.println();
+                    System.out.print("[ WARN ] Did not find 21 items on subpage! Only found " + elements.size() + " elements on subpage " + doc.location() + ", continiuing to reach all " + maxPages + " subpages.");
+                }
+                for (Element e : elements) {
+                    String item = e.select("h3").text();
+                    String image = e.select("img").attr("src");
+                    String info = e.select("div[class*=product-description]").text();
+                    if (info.length() > 101) info = info.substring(0, 100);
+                    String category = doc.select("li[itemprop*=itemListElement]").text();
+                    String itemUrl = e.select("a[class*=structured]").attr("href");
+                    String itemSubPageUrl = doc.baseUri();
+                    LocalDateTime insertTimeStamp = LocalDateTime.now();
 
 //                String price = e.select("strong a").text().replaceAll("fra|kr|\\.", "").trim();
 
 //                if (price == null || price.equals("")) {
-                String price = e.select("span[class*=price]").text().replaceAll("fra|kr|\\.", "").trim();
-                price = price.split(" ")[0];
+                    String price = e.select("span[class*=price]").text().replaceAll("fra|kr|\\.", "").trim();
+                    price = price.split(" ")[0];
 //  }
 
-                count++;
+                    count++;
 
-                try {
-                    int priceInt = Integer.parseInt(price);
-                    archivist.executeUpdatePreparedStatement(item, String.valueOf(priceInt), category, info, image, itemUrl, itemSubPageUrl, insertTimeStamp, initExecTimeStamp);
+                    try {
+                        int priceInt = Integer.parseInt(price);
+                        archivist.executeUpdatePreparedStatement(item, String.valueOf(priceInt), category, info, image, itemUrl, itemSubPageUrl, insertTimeStamp, initExecTimeStamp);
 
-                    //Random r = new Random();
-                    //priceInt = priceInt - (priceInt / (r.nextInt(8) + 2)+ (priceInt / (r.nextInt(8) + 2)));
-                    //insertTimeStamp = insertTimeStamp.minusDays(r.nextInt(10));
-                    //archivist.executeUpdatePreparedStatement(item, String.valueOf(priceInt), category, info, image, itemUrl, itemSubPageUrl, insertTimeStamp, initExecTimeStamp);
+                        //Random r = new Random();
+                        //priceInt = priceInt - (priceInt / (r.nextInt(8) + 2)+ (priceInt / (r.nextInt(8) + 2)));
+                        //insertTimeStamp = insertTimeStamp.minusDays(r.nextInt(10));
+                        //archivist.executeUpdatePreparedStatement(item, String.valueOf(priceInt), category, info, image, itemUrl, itemSubPageUrl, insertTimeStamp, initExecTimeStamp);
 
-                } catch (NumberFormatException nfe) {
-                    System.out.println("[ ERROR ] cannot parse int:" + price + ", item=" + item + ", itemSubPageUrl=" + itemSubPageUrl);
+                    } catch (NumberFormatException nfe) {
+                        System.out.println("[ ERROR ] cannot parse int:" + price + ", item=" + item + ", itemSubPageUrl=" + itemSubPageUrl);
+                    }
+
                 }
-
+                System.out.print(".");
+            } catch (Exception e) {
+                System.out.println("[ FATAL! ] skipted a whole subpage!");
+                System.out.println(e);
             }
-            System.out.print(".");
         }
 
         System.out.println();
